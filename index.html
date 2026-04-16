@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The American Life Clock</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      color: #1a1a18;
+      min-height: 100vh;
+      padding: 3rem 1rem 4rem;
+      background-color: #f0ede4;
+      background-image:
+        radial-gradient(circle at 15% 15%, rgba(29,158,117,0.10) 0%, transparent 45%),
+        radial-gradient(circle at 85% 80%, rgba(55,138,221,0.10) 0%, transparent 45%),
+        radial-gradient(circle at 65% 5%,  rgba(239,159,39,0.08) 0%, transparent 40%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Ccircle cx='1' cy='1' r='0.45' fill='%23000' fill-opacity='0.045'/%3E%3C/svg%3E");
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #131311;
+        color: #e8e6df;
+        background-image:
+          radial-gradient(circle at 15% 15%, rgba(29,158,117,0.11) 0%, transparent 45%),
+          radial-gradient(circle at 85% 80%, rgba(55,138,221,0.11) 0%, transparent 45%),
+          radial-gradient(circle at 65% 5%,  rgba(239,159,39,0.09) 0%, transparent 40%),
+          url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Ccircle cx='1' cy='1' r='0.45' fill='%23fff' fill-opacity='0.04'/%3E%3C/svg%3E");
+      }
+      .event-card    { background: rgba(30,30,28,0.85); border-color: rgba(255,255,255,0.08); }
+      .timer-display { background: rgba(24,24,22,0.85); border-color: rgba(255,255,255,0.08); }
+      .divider       { border-color: rgba(255,255,255,0.08); }
+      .quetelet-quote { border-color: rgba(255,255,255,0.18); color: #777; }
+      .pause-btn     { color: #e8e6df; border-color: rgba(255,255,255,0.2); }
+      .pause-btn:hover { background: rgba(255,255,255,0.06); }
+      .section-label { color: #666; }
+      .elapsed-label { color: #555; }
+      .event-name    { color: #777; }
+      .event-rate    { color: #444; }
+      .footer-note   { color: #444; }
+      .elapsed-time  { color: #f0ede4; }
+    }
+
+    .life-clock-root { max-width: 720px; margin: 0 auto; }
+
+    .clock-header { text-align: center; margin-bottom: 2.5rem; }
+
+    .clock-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 34px;
+      font-weight: 400;
+      letter-spacing: -0.5px;
+      margin: 0 0 8px;
+    }
+
+    .clock-subtitle {
+      font-size: 11px;
+      color: #888;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .timer-display {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      padding: 1.75rem;
+      border: 0.5px solid rgba(0,0,0,0.1);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.65);
+      backdrop-filter: blur(6px);
+    }
+
+    .elapsed-label {
+      font-size: 11px;
+      color: #888;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .elapsed-time {
+      font-size: 48px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      font-variant-numeric: tabular-nums;
+      color: #111110;
+    }
+
+    .section-label {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #666;
+      margin: 0 0 12px 2px;
+    }
+
+    .events-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .event-card {
+      border: 0.5px solid rgba(0,0,0,0.1);
+      border-radius: 14px;
+      padding: 1rem 1.25rem;
+      background: rgba(255,255,255,0.7);
+      backdrop-filter: blur(4px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .event-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      gap: 8px;
+    }
+
+    .event-name {
+      font-size: 11px;
+      color: #555;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      line-height: 1.5;
+    }
+
+    .event-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 3px;
+      transition: transform 0.18s ease;
+    }
+
+    .event-count {
+      font-size: 30px;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.5px;
+      line-height: 1;
+      margin-bottom: 5px;
+    }
+
+    .event-rate { font-size: 11px; color: #aaa; }
+
+    .emoji-flash {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      font-size: 30px;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 10;
+      line-height: 1;
+    }
+
+    .emoji-flash.pop {
+      animation: emojiPop 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    @keyframes emojiPop {
+      0%   { transform: translate(-50%, -50%) scale(0);    opacity: 0; }
+      25%  { transform: translate(-50%, -55%) scale(1.35); opacity: 1; }
+      55%  { transform: translate(-50%, -57%) scale(1.05); opacity: 1; }
+      100% { transform: translate(-50%, -70%) scale(0.7);  opacity: 0; }
+    }
+
+    .dot-birth     { background: #1D9E75; }
+    .dot-death     { background: #888780; }
+    .dot-marriage  { background: #378ADD; }
+    .dot-divorce   { background: #7F77DD; }
+    .dot-bones     { background: #B4B2A9; }
+    .dot-surgery   { background: #E24B4A; }
+    .dot-puppies   { background: #EF9F27; }
+    .dot-steps     { background: #5DCAA5; }
+    .dot-survivors { background: #639922; }
+    .dot-pizza     { background: #D85A30; }
+    .dot-parks     { background: #3B6D11; }
+    .dot-diplomas  { background: #185FA5; }
+    .dot-google    { background: #BA7517; }
+    .dot-spotify   { background: #1DB954; }
+    .dot-adoptions { background: #D4537E; }
+    .dot-911       { background: #E24B4A; }
+    .dot-iloveyou  { background: #ED93B1; }
+    .dot-naps      { background: #AFA9EC; }
+
+    .pulse { transform: scale(2.2) !important; }
+
+    .divider {
+      border: none;
+      border-top: 0.5px solid rgba(0,0,0,0.1);
+      margin: 1.75rem 0 1.25rem;
+    }
+
+    .quetelet-quote {
+      margin: 2rem auto 0;
+      max-width: 500px;
+      padding: 1rem 1.25rem;
+      border-left: 2px solid rgba(0,0,0,0.15);
+      font-family: 'DM Serif Display', serif;
+      font-size: 15px;
+      color: #888;
+      line-height: 1.65;
+      font-style: italic;
+    }
+
+    .quote-attr {
+      font-style: normal;
+      font-size: 11px;
+      font-family: 'DM Mono', monospace;
+      color: #aaa;
+      margin-top: 8px;
+      letter-spacing: 0.04em;
+    }
+
+    .footer-note {
+      margin-top: 2.5rem;
+      text-align: center;
+      font-size: 11px;
+      color: #aaa;
+      line-height: 1.8;
+    }
+
+    .pause-btn {
+      display: block;
+      margin: 0 auto 2.5rem;
+      padding: 11px 36px;
+      font-family: 'DM Mono', monospace;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      background: transparent;
+      border: 0.5px solid rgba(0,0,0,0.2);
+      border-radius: 8px;
+      cursor: pointer;
+      color: inherit;
+      transition: background 0.15s;
+    }
+
+    .pause-btn:hover { background: rgba(0,0,0,0.04); }
+  </style>
+</head>
+<body>
+<div class="life-clock-root">
+
+  <div class="clock-header">
+    <h1 class="clock-title">The American Life Clock</h1>
+    <p class="clock-subtitle">US vital statistics — since you opened this page</p>
+  </div>
+
+  <div class="timer-display">
+    <div class="elapsed-label">time elapsed</div>
+    <div class="elapsed-time" id="elapsed">00:00:00</div>
+  </div>
+
+  <button class="pause-btn" id="pauseBtn" onclick="togglePause()">pause</button>
+
+  <p class="section-label">life &amp; loss</p>
+  <div class="events-grid" id="grid-serious"></div>
+
+  <hr class="divider">
+
+  <p class="section-label">joy &amp; abundance</p>
+  <div class="events-grid" id="grid-joyful"></div>
+
+  <hr class="divider">
+
+  <p class="section-label">the digital &amp; everyday</p>
+  <div class="events-grid" id="grid-culture"></div>
+
+  <hr class="divider">
+
+  <p class="section-label">quietly happening right now</p>
+  <div class="events-grid" id="grid-quiet"></div>
+
+  <div class="quetelet-quote">
+    "Society contains the germs of all the crimes that will be committed, as well as the conditions favorable to their development."
+    <div class="quote-attr">— Adolphe Quetelet, <em>Treatise on Man</em>, 1835</div>
+  </div>
+
+  <p class="footer-note">
+    Rates from CDC/NCHS 2023–2024, AHA, APPA, USDA, NPS, Google &amp; Spotify estimates.<br>
+    Every number above was statistically inevitable before you arrived.
+  </p>
+
+</div>
+<script>
+  const SERIOUS = {
+    births:    { annual: 3628934,   label: 'births',              dotClass: 'dot-birth',    emoji: '👶' },
+    deaths:    { annual: 3090964,   label: 'deaths',              dotClass: 'dot-death',    emoji: '🕯️' },
+    marriages: { annual: 2082354,   label: 'marriages',           dotClass: 'dot-marriage', emoji: '💍' },
+    divorces:  { annual: 992677,    label: 'divorces',            dotClass: 'dot-divorce',  emoji: '📄' },
+    bones:     { annual: 6000000,   label: 'bones broken',        dotClass: 'dot-bones',    emoji: '🦴' },
+    surgeries: { annual: 50000000,  label: 'surgeries performed', dotClass: 'dot-surgery',  emoji: '🏥' },
+  };
+
+  const JOYFUL = {
+    puppies:   { annual: 7500000,    label: 'puppies born',         dotClass: 'dot-puppies',   emoji: '🐶' },
+    steps:     { annual: 3628934,    label: 'first steps',          dotClass: 'dot-steps',     emoji: '👣' },
+    survivors: { annual: 500000,     label: 'cancer survivors',     dotClass: 'dot-survivors', emoji: '🎗️' },
+    pizza:     { annual: 3000000000, label: 'pizzas eaten',         dotClass: 'dot-pizza',     emoji: '🍕' },
+    parks:     { annual: 330000000,  label: 'national park visits', dotClass: 'dot-parks',     emoji: '🌲' },
+    diplomas:  { annual: 3400000,    label: 'high school diplomas', dotClass: 'dot-diplomas',  emoji: '🎓' },
+  };
+
+  const CULTURE = {
+    google:    { annual: 500000000,    label: '"what time is it" googled', dotClass: 'dot-google',    emoji: '🔍' },
+    spotify:   { annual: 280000000000, label: 'songs streamed on Spotify', dotClass: 'dot-spotify',   emoji: '🎵' },
+    adoptions: { annual: 135000,       label: 'adoptions finalized',       dotClass: 'dot-adoptions', emoji: '🏠' },
+  };
+
+  const QUIET = {
+    calls911:  { annual: 240000000,    label: '911 calls made',      dotClass: 'dot-911',      emoji: '🚨' },
+    iloveyou:  { annual: 365000000000, label: '"i love you" texted', dotClass: 'dot-iloveyou', emoji: '❤️' },
+    naps:      { annual: 18250000000,  label: 'naps taken',          dotClass: 'dot-naps',     emoji: '😴' },
+  };
+
+  const SEC_PER_YEAR = 365.25 * 24 * 3600;
+
+  const allGroups = [
+    ['grid-serious', SERIOUS],
+    ['grid-joyful',  JOYFUL],
+    ['grid-culture', CULTURE],
+    ['grid-quiet',   QUIET],
+  ];
+
+  const allData  = Object.assign({}, SERIOUS, JOYFUL, CULTURE, QUIET);
+  const allRates = {};
+  for (const k in allData) allRates[k] = allData[k].annual / SEC_PER_YEAR;
+
+  let startTime = Date.now(), pausedAt = null, pausedDuration = 0, paused = false;
+
+  function getElapsedSeconds() {
+    if (paused) return (pausedAt - startTime - pausedDuration) / 1000;
+    return (Date.now() - startTime - pausedDuration) / 1000;
+  }
+
+  function togglePause() {
+    const btn = document.getElementById('pauseBtn');
+    if (paused) { pausedDuration += Date.now() - pausedAt; paused = false; btn.textContent = 'pause'; }
+    else        { pausedAt = Date.now(); paused = true; btn.textContent = 'resume'; }
+  }
+
+  function formatTime(s) {
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = Math.floor(s%60);
+    return [h,m,sec].map(n=>String(n).padStart(2,'0')).join(':');
+  }
+
+  function rateLabel(annual) {
+    const ps = annual / SEC_PER_YEAR, pm = ps * 60;
+    if (pm >= 1000) return Math.round(pm).toLocaleString() + '/min';
+    if (pm >= 1)    return pm.toFixed(1) + '/min';
+    return ps.toFixed(4) + '/sec';
+  }
+
+  const countEls = {}, dotEls = {}, emojiEls = {}, prevCounts = {}, lastFlash = {};
+  const THROTTLE = { pizza: 250, spotify: 40, iloveyou: 40, naps: 80, google: 350, surgeries: 200 };
+
+  for (const [gridId, data] of allGroups) {
+    const grid = document.getElementById(gridId);
+    for (const k in data) {
+      const d = data[k];
+      const card = document.createElement('div');
+      card.className = 'event-card';
+      card.innerHTML = `
+        <div class="event-top">
+          <span class="event-name">${d.label}</span>
+          <span class="event-dot ${d.dotClass}" id="dot-${k}"></span>
+        </div>
+        <div class="event-count" id="count-${k}">0</div>
+        <div class="event-rate">${rateLabel(d.annual)}</div>
+        <div class="emoji-flash" id="emoji-${k}">${d.emoji}</div>
+      `;
+      grid.appendChild(card);
+      countEls[k]   = card.querySelector(`#count-${k}`);
+      dotEls[k]     = card.querySelector(`#dot-${k}`);
+      emojiEls[k]   = card.querySelector(`#emoji-${k}`);
+      prevCounts[k] = 0;
+      lastFlash[k]  = 0;
+    }
+  }
+
+  function flashEmoji(k) {
+    const el = emojiEls[k];
+    const throttle = THROTTLE[k] || 0;
+    const now = Date.now();
+    if (now - lastFlash[k] < throttle) return;
+    lastFlash[k] = now;
+    el.classList.remove('pop');
+    void el.offsetWidth;
+    el.classList.add('pop');
+  }
+
+  function tick() {
+    if (!paused) {
+      const elapsed = getElapsedSeconds();
+      document.getElementById('elapsed').textContent = formatTime(elapsed);
+      for (const k in allRates) {
+        const newCount = Math.floor(allRates[k] * elapsed);
+        countEls[k].textContent = newCount.toLocaleString();
+        if (newCount !== prevCounts[k]) {
+          dotEls[k].classList.add('pulse');
+          setTimeout(() => dotEls[k].classList.remove('pulse'), 200);
+          flashEmoji(k);
+          prevCounts[k] = newCount;
+        }
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  requestAnimationFrame(tick);
+</script>
+</body>
+</html>
